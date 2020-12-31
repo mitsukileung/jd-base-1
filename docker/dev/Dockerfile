@@ -1,7 +1,15 @@
 FROM node:lts-alpine
 LABEL maintainer="Evine Deng <evinedeng@foxmail.com>"
-ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.bfsu.edu.cn/g' /etc/apk/repositories \
+ARG JD_BASE_URL=https://github.com/EvineDeng/jd-base
+ARG JD_BASE_BRANCH=v3
+ARG JD_SCRIPTS_URL=https://github.com/lxk0301/jd_scripts
+ARG JD_SCRIPTS_BRANCH=master
+ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+    LANG=zh_CN.UTF-8 \
+    SHELL=/bin/bash \
+    PS1="\u@\h:\w \$ " \
+    JD_DIR=/jd
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories \
     && apk update -f \
     && apk upgrade \
     && apk --no-cache add -f bash \
@@ -14,22 +22,18 @@ RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.bfsu.edu.cn/g' /etc/apk/repositorie
                              tzdata \
                              perl \
                              openssl \
-    && rm -rf /var/cache/apk/*
-ENV LANG=zh_CN.UTF-8 \
-    SHELL=/bin/bash \
-    PS1="\u@\h:\w \$ " \
-    JD_DIR=/jd \
-    JS_DIR=/jd/scripts
-COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod 777 /usr/local/bin/entrypoint.sh \
+    && rm -rf /var/cache/apk/* \
     && ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
     && echo "Asia/Shanghai" > /etc/timezone \
-    && git clone -b v3 https://github.com/EvineDeng/jd-base ${JD_DIR} \
-    && git clone -b master https://github.com/lxk0301/jd_scripts ${JS_DIR} \
-    && cd ${JS_DIR} \
+    && git clone -b ${JD_BASE_BRANCH} ${JD_BASE_URL} ${JD_DIR} \
+    && git clone -b ${JD_SCRIPTS_BRANCH} ${JD_SCRIPTS_URL} ${JD_DIR}/scripts \
+    && cd ${JD_DIR}/scripts \
     && npm install \
     && ln -sf ${JD_DIR}/jd.sh /usr/local/bin/jd \
     && ln -sf ${JD_DIR}/git_pull.sh /usr/local/bin/git_pull \
-    && ln -sf ${JD_DIR}/rm_log.sh /usr/local/bin/rm_log
+    && ln -sf ${JD_DIR}/rm_log.sh /usr/local/bin/rm_log \
+    && ln -sf ${JD_DIR}/export_sharecodes.sh /usr/local/bin/export_sharecodes \
+    && cp -f ${JD_DIR}/docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh \
+    && chmod 777 /usr/local/bin/docker-entrypoint.sh
 WORKDIR ${JD_DIR}
-ENTRYPOINT entrypoint.sh
+ENTRYPOINT docker-entrypoint.sh
